@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
-    <PackageId>GodotTools.IdeMessaging</PackageId>
+    <PackageId>Carsillas.GodotTools.IdeMessaging</PackageId>
     <Version>1.1.2</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <Authors>Godot Engine contributors</Authors>
