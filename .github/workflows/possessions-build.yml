@@ -1,0 +1,111 @@
+name: Possessions Windows .NET double-precision build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: possessions-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 360
+    env:
+      BUILD_NAME: possessions
+      SCONS_FLAGS: platform=windows arch=x86_64 module_mono_enabled=yes precision=double debug_symbols=no d3d12=yes
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout selected fork revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SCons
+        run: python -m pip install scons==4.10.1
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Direct3D 12 dependencies
+        run: python misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Build editor
+        run: scons $SCONS_FLAGS target=editor -j2
+
+      - name: Generate C# bindings from this engine
+        run: ./bin/godot.windows.editor.double.x86_64.mono.console.exe --headless --generate-mono-glue modules/mono/glue
+
+      - name: Build matching managed assemblies and packages
+        run: python modules/mono/build_scripts/build_assemblies.py --precision=double --godot-platform=windows --godot-output-dir=bin
+
+      - name: Build debug export template
+        run: scons $SCONS_FLAGS target=template_debug -j2
+
+      - name: Build release export template
+        run: scons $SCONS_FLAGS target=template_release -j2
+
+      - name: Verify editor starts
+        run: ./bin/godot.windows.editor.double.x86_64.mono.console.exe --headless --version
+
+      - name: Package editor and export templates
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import zipfile
+          import version
+
+          output = Path('dist')
+          output.mkdir()
+          config = f'{version.major}.{version.minor}.{version.patch}.{version.status}.mono.double'
+          manifest = {
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'commit': os.environ['GITHUB_SHA'],
+              'ref': os.environ['GITHUB_REF'],
+              'configuration': config,
+              'build': os.environ['BUILD_NAME'],
+          }
+          (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          with zipfile.ZipFile(output / 'windows-export-templates.tpz', 'w', zipfile.ZIP_DEFLATED) as archive:
+              archive.writestr('templates/version.txt', config + '\n')
+              for target, name in [('template_debug', 'debug'), ('template_release', 'release')]:
+                  for suffix, destination in [('', ''), ('.console', '_console')]:
+                      source = Path(f'bin/godot.windows.{target}.double.x86_64.mono{suffix}.exe')
+                      archive.write(source, f'templates/windows_{name}_x86_64{destination}.exe')
+              for source in [*Path('bin/x86_64').glob('*.dll'), *Path('bin').glob('*.dll')]:
+                  archive.write(source, f'templates/{source.stem}.x86_64.dll')
+          editor = output / 'editor'
+          editor.mkdir()
+          for suffix in ['', '.console']:
+              shutil.copy2(f'bin/godot.windows.editor.double.x86_64.mono{suffix}.exe', editor)
+          shutil.copytree('bin/GodotSharp', editor / 'GodotSharp')
+          if Path('bin/x86_64').exists():
+              shutil.copytree('bin/x86_64', editor / 'x86_64')
+          for source in Path('bin').glob('*.dll'):
+              shutil.copy2(source, editor)
+          shutil.copy2(output / 'build.json', editor)
+          shutil.make_archive(str(output / 'windows-editor'), 'zip', editor)
+          PY
+
+      - name: Upload editor, templates, and build identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: possessions-windows-dotnet-double-${{ github.sha }}
+          path: |
+            dist/windows-editor.zip
+            dist/windows-export-templates.tpz
+            dist/build.json
+          if-no-files-found: error
