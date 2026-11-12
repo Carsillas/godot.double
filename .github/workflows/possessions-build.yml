@@ -40,6 +40,12 @@ jobs:
       - name: Install Direct3D 12 dependencies
         run: python misc/scripts/install_d3d12_sdk_windows.py
 
+      - name: Install AccessKit dependencies
+        run: python misc/scripts/install_accesskit.py
+
+      - name: Test shared texture embedding
+        run: python -m unittest discover -s modules/shared_textures/tests -p 'test_*.py'
+
       - name: Build editor
         run: scons $SCONS_FLAGS target=editor -j2
 
@@ -57,6 +63,14 @@ jobs:
 
       - name: Verify editor starts
         run: ./bin/godot.windows.editor.double.x86_64.mono.console.exe --headless --version
+
+      - name: Test shared texture resources
+        run: ./bin/godot.windows.editor.double.x86_64.mono.console.exe --headless --path modules/shared_textures/tests/smoke --script test_shared_texture.gd
+
+      - name: Test shared texture picker
+        run: |
+          ./bin/godot.windows.editor.double.x86_64.mono.console.exe --headless --editor --path modules/shared_textures/tests/picker --quit-after 300 | tee picker-test.log
+          python -c "from pathlib import Path; assert 'SharedTexture picker regression: passed' in Path('picker-test.log').read_text()"
 
       - name: Package editor and export templates
         run: |

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="SharedTexture" inherits="Texture2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+	<brief_description>
+		A game texture embedded in this engine build.
+	</brief_description>
+	<description>
+		Select an [member asset] to use an image embedded under [code]modules/shared_textures/assets/[/code] when the engine was built. No copy of the source image is required in the game project. Shared textures work in properties accepting [Texture2D], including [TextureRect], [Sprite2D], and [StyleBoxTexture]. They do not modify the editor theme.
+		Resources with the same asset share their decoded texture. Empty, missing, or undecodable assets produce an empty texture. Missing asset names are retained when saving resources. Games using this resource require matching export templates from this engine fork.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_asset_id" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="path_or_id" type="String" />
+			<description>Resolves an embedded path or known ID to its path ID. Unknown values are preserved.</description>
+		</method>
+		<method name="get_asset_path" qualifiers="static">
+			<return type="String" />
+			<param index="0" name="id" type="String" />
+			<description>Returns the current path for a asset ID. Unknown values are preserved.</description>
+		</method>
+		<method name="get_available_assets" qualifiers="static">
+			<return type="PackedStringArray" />
+			<description>
+				Returns the embedded asset paths in alphabetical order, including subfolders and file extensions. The list is fixed at engine build time.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="asset" type="String" setter="set_asset" getter="get_asset" default="&quot;&quot;">
+			A relative asset path, or an embedded image path when assigning a selection, such as [code]examples/checker.svg[/code]. The Inspector displays a folder menu with thumbnail previews. The saved value is the relative asset path. Replacing an image at the same path preserves references. Setting an empty string clears the texture. Changing this property emits [signal Resource.changed].
+		</member>
+	</members>
+</class>

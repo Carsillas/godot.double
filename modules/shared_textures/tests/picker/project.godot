@@ -1,0 +1,10 @@
+config_version=5
+
+[application]
+config/name="SharedTexture picker regression"
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/regression/plugin.cfg")
+
+[rendering]
+renderer/rendering_method="gl_compatibility"

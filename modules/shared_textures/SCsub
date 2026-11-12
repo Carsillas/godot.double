@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
+Import("env")
+Import("env_modules")
+
+import shared_texture_builders
+
+env_shared_textures = env_modules.Clone()
+env_shared_textures.add_source_files(env.modules_sources, "*.cpp")
+
+# Scan at configuration time so additions and removals change the dependency list.
+sources = shared_texture_builders.find_textures(Dir("assets").abspath)
+generated = env_shared_textures.CommandNoCache(
+    ["embedded_textures.gen.h", "embedded_textures.gen.json"],
+    sources,
+    env.Run(shared_texture_builders.make_header),
+)
+
+env_shared_textures.Depends(generated, ["shared_texture_builders.py", "texture_manifest.py"])
